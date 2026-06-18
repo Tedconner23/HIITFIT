@@ -85,6 +85,33 @@ describe('workouts store', () => {
     expect(emptyExercise('hiit')).toMatchObject({ work: 40, rest: 20 })
   })
 
+  it('duplicates a workout with a new id, new exercise ids, and (copy) name', () => {
+    const store = useWorkoutsStore()
+    const id = store.save({
+      id: null,
+      name: 'Push Day',
+      type: 'reps',
+      exercises: [{ id: 'e1', name: 'Bench', sets: 3, reps: '10', rest: 60 }],
+    })
+    const copyId = store.duplicate(id)
+    expect(store.workouts).toHaveLength(2)
+    const copy = store.get(copyId)
+    expect(copy.id).not.toBe(id)
+    expect(copy.name).toBe('Push Day (copy)')
+    expect(copy.exercises[0].id).not.toBe('e1')
+    expect(copy.exercises[0].name).toBe('Bench')
+  })
+
+  it('seeds example workouts only on the first run', () => {
+    const store = useWorkoutsStore()
+    store.seedIfFirstRun()
+    expect(store.workouts.length).toBe(2)
+    expect(localStorage.getItem('seeded')).toBe('1')
+    // second call is a no-op
+    store.seedIfFirstRun()
+    expect(store.workouts.length).toBe(2)
+  })
+
   it('importMerge rejects non-arrays and skips malformed entries', () => {
     const store = useWorkoutsStore()
     expect(() => store.importMerge({})).toThrow()

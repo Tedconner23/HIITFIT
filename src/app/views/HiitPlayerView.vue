@@ -20,6 +20,7 @@ const timeline = workout
 const totalDuration = workout ? timelineDuration(buildTimeline(workout)) : 0
 
 const started = ref(false)
+const paused = ref(false)
 const index = ref(0)
 const remaining = ref(timeline[0]?.seconds ?? 0)
 
@@ -78,14 +79,38 @@ async function requestWakeLock() {
   }
 }
 
+function vibrate(ms) {
+  try {
+    navigator.vibrate?.(ms)
+  } catch {
+    // ignore
+  }
+}
+
 function beginAt(i) {
   index.value = i
   remaining.value = timeline[i].seconds
   intervalEnd = Date.now() + timeline[i].seconds * 1000
+  vibrate(timeline[i].kind === 'work' ? 80 : 40)
   if (timeline[i].kind === 'work') beep(880, 0.18)
 }
 
+function togglePause() {
+  if (paused.value) {
+    intervalEnd = Date.now() + remaining.value * 1000
+    paused.value = false
+  } else {
+    paused.value = true
+  }
+}
+
+function skip() {
+  if (index.value < timeline.length - 1) beginAt(index.value + 1)
+  else finish()
+}
+
 function tick() {
+  if (paused.value) return
   const secLeft = Math.max(0, Math.ceil((intervalEnd - Date.now()) / 1000))
   if (secLeft <= 0) {
     if (index.value < timeline.length - 1) beginAt(index.value + 1)
@@ -181,6 +206,21 @@ onUnmounted(cleanup)
         <template v-if="next">Next: {{ next.name }}</template>
         <template v-else>Last one!</template>
       </p>
+    </div>
+
+    <div class="mt-4 flex gap-3">
+      <button
+        class="flex-1 rounded-2xl border border-neutral-200 py-3 font-medium"
+        @click="togglePause"
+      >
+        {{ paused ? 'Resume' : 'Pause' }}
+      </button>
+      <button
+        class="flex-1 rounded-2xl border border-neutral-200 py-3 font-medium"
+        @click="skip"
+      >
+        Skip
+      </button>
     </div>
   </div>
 </template>

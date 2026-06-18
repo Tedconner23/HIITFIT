@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import { useWorkoutsStore } from '../stores/workouts'
 import { useSessionsStore } from '../stores/sessions'
 import { formatDate, formatDuration } from '../format'
@@ -9,9 +9,15 @@ const props = defineProps({ id: { type: String, required: true } })
 
 const store = useWorkoutsStore()
 const sessions = useSessionsStore()
+const router = useRouter()
 const workout = computed(() => store.get(props.id))
 const history = computed(() => sessions.sessionsFor(props.id))
 const isHiit = computed(() => workout.value?.type === 'hiit')
+
+function duplicate() {
+  const id = store.duplicate(props.id)
+  if (id) router.push({ name: 'edit', params: { id } })
+}
 
 function summary(s) {
   return s.type === 'hiit'
@@ -58,6 +64,13 @@ function summary(s) {
         </span>
       </li>
     </ul>
+
+    <button
+      class="mt-4 w-full rounded-2xl border border-neutral-200 py-3 text-sm text-neutral-600"
+      @click="duplicate"
+    >
+      Duplicate workout
+    </button>
 
     <section v-if="history.length" class="mt-8">
       <h2 class="mb-3 text-sm font-medium text-neutral-500">History</h2>

@@ -40,6 +40,13 @@ function removeExercise(index) {
   workout.value.exercises.splice(index, 1)
 }
 
+function move(i, dir) {
+  const arr = workout.value.exercises
+  const j = i + dir
+  if (j < 0 || j >= arr.length) return
+  ;[arr[i], arr[j]] = [arr[j], arr[i]]
+}
+
 function save() {
   // Land on the saved workout's detail screen (works for new + existing) so a
   // newly created workout never appears to "vanish" behind the list's tab.
@@ -89,43 +96,80 @@ function destroy() {
       :key="ex.id"
       class="rounded-2xl border border-neutral-200 bg-white p-4"
     >
-      <div class="mb-3 flex items-center gap-3">
+      <div class="mb-3 flex items-center gap-2">
         <input
           v-model="ex.name"
           type="text"
           placeholder="Exercise"
           class="flex-1 bg-transparent text-base outline-none placeholder:text-neutral-400"
         />
-        <button class="text-sm text-neutral-400" @click="removeExercise(i)">
+        <button
+          class="px-1 text-neutral-400 disabled:opacity-30"
+          :disabled="i === 0"
+          @click="move(i, -1)"
+        >
+          ↑
+        </button>
+        <button
+          class="px-1 text-neutral-400 disabled:opacity-30"
+          :disabled="i === workout.exercises.length - 1"
+          @click="move(i, 1)"
+        >
+          ↓
+        </button>
+        <button class="ml-1 text-sm text-neutral-400" @click="removeExercise(i)">
           Remove
         </button>
       </div>
       <div class="flex gap-3">
-        <label class="flex flex-1 flex-col gap-1 text-xs text-neutral-400">
-          {{ isHiit ? 'Work (sec)' : 'Sets' }}
-          <input
-            v-model.number="ex[isHiit ? 'work' : 'sets']"
-            type="number"
-            min="1"
-            class="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-base text-neutral-900 outline-none focus:border-neutral-400"
-          />
-        </label>
-        <label class="flex flex-1 flex-col gap-1 text-xs text-neutral-400">
-          {{ isHiit ? 'Rest (sec)' : 'Reps' }}
-          <input
-            v-if="isHiit"
-            v-model.number="ex.rest"
-            type="number"
-            min="0"
-            class="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-base text-neutral-900 outline-none focus:border-neutral-400"
-          />
-          <input
-            v-else
-            v-model="ex.reps"
-            type="text"
-            class="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-base text-neutral-900 outline-none focus:border-neutral-400"
-          />
-        </label>
+        <template v-if="isHiit">
+          <label class="flex flex-1 flex-col gap-1 text-xs text-neutral-400">
+            Work (sec)
+            <input
+              v-model.number="ex.work"
+              type="number"
+              min="1"
+              class="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-base text-neutral-900 outline-none focus:border-neutral-400"
+            />
+          </label>
+          <label class="flex flex-1 flex-col gap-1 text-xs text-neutral-400">
+            Rest (sec)
+            <input
+              v-model.number="ex.rest"
+              type="number"
+              min="0"
+              class="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-base text-neutral-900 outline-none focus:border-neutral-400"
+            />
+          </label>
+        </template>
+        <template v-else>
+          <label class="flex flex-1 flex-col gap-1 text-xs text-neutral-400">
+            Sets
+            <input
+              v-model.number="ex.sets"
+              type="number"
+              min="1"
+              class="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-base text-neutral-900 outline-none focus:border-neutral-400"
+            />
+          </label>
+          <label class="flex flex-1 flex-col gap-1 text-xs text-neutral-400">
+            Reps
+            <input
+              v-model="ex.reps"
+              type="text"
+              class="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-base text-neutral-900 outline-none focus:border-neutral-400"
+            />
+          </label>
+          <label class="flex flex-1 flex-col gap-1 text-xs text-neutral-400">
+            Rest (sec)
+            <input
+              v-model.number="ex.rest"
+              type="number"
+              min="0"
+              class="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-base text-neutral-900 outline-none focus:border-neutral-400"
+            />
+          </label>
+        </template>
       </div>
     </li>
   </ul>

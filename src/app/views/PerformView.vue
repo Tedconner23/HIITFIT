@@ -1,8 +1,9 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWorkoutsStore } from '../stores/workouts'
 import { useSessionsStore } from '../stores/sessions'
+import { formatDuration } from '../format'
 
 const props = defineProps({ id: { type: String, required: true } })
 
@@ -15,20 +16,90 @@ const workout = store.get(props.id)
 // Keys are `${exerciseId}:${setIndex}`.
 const done = ref(new Set(workout ? sessions.getProgress(workout.id) : []))
 
+// Rest timer (starts when a set is checked off, if the exercise has a rest).
+const restRemaining = ref(0)
+let restEnd = 0
+let restTimer = null
+let audioCtx = null
+
 function key(exId, setIndex) {
   return `${exId}:${setIndex}`
 }
 
+function ensureAudio() {
+  if (audioCtx) return
+  try {
+    const Ctx = window.AudioContext || window.webkitAudioContext
+    audioCtx = Ctx ? new Ctx() : null
+    audioCtx?.resume?.()
+  } catch {
+    audioCtx = null
+  }
+}
+
+function beep(freq, dur = 0.15) {
+  if (!audioCtx) return
+  const o = audioCtx.createOscillator()
+  const g = audioCtx.createGain()
+  o.type = 'sine'
+  o.frequency.value = freq
+  o.connect(g)
+  g.connect(audioCtx.destination)
+  g.gain.setValueAtTime(0.25, audioCtx.currentTime)
+  g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + dur)
+  o.start()
+  o.stop(audioCtx.currentTime + dur)
+}
+
+function startRest(seconds) {
+  restRemaining.value = seconds
+  restEnd = Date.now() + seconds * 1000
+  if (restTimer) clearInterval(restTimer)
+  restTimer = setInterval(restTick, 200)
+}
+
+function restTick() {
+  const left = Math.max(0, Math.ceil((restEnd - Date.now()) / 1000))
+  if (left <= 0) {
+    stopRest()
+    beep(880, 0.3)
+    return
+  }
+  if (left !== restRemaining.value) {
+    restRemaining.value = left
+    if (left <= 3) beep(660, 0.1)
+  }
+}
+
+function addRest(seconds) {
+  restEnd += seconds * 1000
+  restRemaining.value = Math.max(0, Math.ceil((restEnd - Date.now()) / 1000))
+}
+
+function stopRest() {
+  if (restTimer) clearInterval(restTimer)
+  restTimer = null
+  restRemaining.value = 0
+}
+
 function toggle(exId, setIndex) {
+  ensureAudio()
   const k = key(exId, setIndex)
-  if (done.value.has(k)) done.value.delete(k)
-  else done.value.add(k)
+  const adding = !done.value.has(k)
+  if (adding) done.value.add(k)
+  else done.value.delete(k)
   // Reassign so Vue tracks the Set mutation.
   done.value = new Set(done.value)
   sessions.setProgress(workout.id, [...done.value])
+  if (adding) {
+    const ex = workout.exercises.find((e) => e.id === exId)
+    const rest = Number(ex?.rest) || 0
+    if (rest > 0) startRest(rest)
+  }
 }
 
 function finish() {
+  stopRest()
   sessions.recordSession(workout, [...done.value])
   done.value = new Set()
   router.push({ name: 'detail', params: { id: workout.id } })
@@ -37,6 +108,8 @@ function finish() {
 const totalSets = computed(() =>
   workout ? workout.exercises.reduce((n, ex) => n + (Number(ex.sets) || 0), 0) : 0,
 )
+
+onUnmounted(stopRest)
 </script>
 
 <template>
@@ -90,6 +163,35 @@ const totalSets = computed(() =>
         </div>
       </li>
     </ul>
+
+    <!-- spacer so the rest bar doesn't cover the last exercise -->
+    <div v-if="restRemaining > 0" class="h-24"></div>
+
+    <div
+      v-if="restRemaining > 0"
+      class="fixed inset-x-0 bottom-0 px-5"
+      style="padding-bottom: max(1rem, env(safe-area-inset-bottom))"
+    >
+      <div
+        class="mx-auto flex max-w-md items-center justify-between gap-3 rounded-2xl bg-neutral-900 px-5 py-3 text-white shadow-lg"
+      >
+        <span class="text-sm">Rest · {{ formatDuration(restRemaining) }}</span>
+        <div class="flex gap-2">
+          <button
+            class="rounded-full bg-white/15 px-3 py-1 text-sm"
+            @click="addRest(15)"
+          >
+            +15s
+          </button>
+          <button
+            class="rounded-full bg-white px-3 py-1 text-sm font-medium text-neutral-900"
+            @click="stopRest"
+          >
+            Skip
+          </button>
+        </div>
+      </div>
+    </div>
   </template>
 
   <p v-else class="py-12 text-center text-neutral-400">Workout not found.</p>
