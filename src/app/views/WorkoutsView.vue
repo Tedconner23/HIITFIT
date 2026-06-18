@@ -56,43 +56,38 @@ async function restore(event) {
     <h1 class="text-2xl font-semibold tracking-tight">Workouts</h1>
     <RouterLink
       :to="{ name: 'new' }"
-      class="rounded-full bg-white px-4 py-2 text-sm font-medium text-neutral-950"
+      class="rounded-full bg-neutral-900 px-4 py-2 text-sm font-medium text-white"
     >
       + New
     </RouterLink>
   </header>
 
-  <p v-if="store.workouts.length === 0" class="py-12 text-center text-neutral-500">
-    No workouts yet. Tap <span class="text-neutral-300">+ New</span> to build one.
+  <p v-if="store.workouts.length === 0" class="py-16 text-center text-neutral-400">
+    No workouts yet. Tap <span class="text-neutral-600">+ New</span> to build one.
   </p>
 
   <ul v-else class="flex flex-col gap-3">
     <li v-for="w in store.workouts" :key="w.id">
       <SwipeRow @delete="confirmDelete(w)">
-        <div class="flex items-center justify-between rounded-2xl bg-neutral-900 pr-3">
-          <RouterLink
-            :to="{ name: 'perform', params: { id: w.id } }"
-            class="flex-1 px-5 py-4"
-          >
-            <p class="font-medium">{{ w.name || 'Untitled' }}</p>
-            <p class="text-sm text-neutral-500">
+        <RouterLink
+          :to="{ name: 'detail', params: { id: w.id } }"
+          class="flex items-center justify-between rounded-2xl border border-neutral-200 bg-white px-5 py-4"
+        >
+          <span>
+            <span class="block font-medium">{{ w.name || 'Untitled' }}</span>
+            <span class="mt-0.5 block text-sm text-neutral-400">
               {{ w.exercises.length }}
               {{ w.exercises.length === 1 ? 'exercise' : 'exercises' }}
               · {{ lastLabel(w.id) }}
-            </p>
-          </RouterLink>
-          <RouterLink
-            :to="{ name: 'edit', params: { id: w.id } }"
-            class="rounded-full px-3 py-2 text-sm text-neutral-400"
-          >
-            Edit
-          </RouterLink>
-        </div>
+            </span>
+          </span>
+          <span class="text-lg text-neutral-300">›</span>
+        </RouterLink>
       </SwipeRow>
     </li>
   </ul>
 
-  <footer class="mt-10 flex justify-center gap-6 text-sm text-neutral-500">
+  <footer class="mt-10 flex justify-center gap-6 text-sm text-neutral-400">
     <button @click="backup">Backup</button>
     <button @click="fileInput.click()">Restore</button>
     <input

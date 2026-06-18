@@ -31,7 +31,7 @@ function toggle(exId, setIndex) {
 function finish() {
   sessions.recordSession(workout, [...done.value])
   done.value = new Set()
-  router.push({ name: 'workouts' })
+  router.push({ name: 'detail', params: { id: workout.id } })
 }
 
 const totalSets = computed(() =>
@@ -42,11 +42,16 @@ const totalSets = computed(() =>
 <template>
   <template v-if="workout">
     <header class="flex items-center justify-between py-6">
-      <RouterLink :to="{ name: 'workouts' }" class="text-neutral-400">Close</RouterLink>
-      <span class="text-sm text-neutral-500">{{ done.size }} / {{ totalSets }}</span>
+      <RouterLink
+        :to="{ name: 'detail', params: { id: workout.id } }"
+        class="text-neutral-400"
+      >
+        Close
+      </RouterLink>
+      <span class="text-sm text-neutral-400">{{ done.size }} / {{ totalSets }}</span>
       <button
         class="font-medium"
-        :class="done.size ? 'text-white' : 'text-neutral-600'"
+        :class="done.size ? 'text-neutral-900' : 'text-neutral-300'"
         :disabled="!done.size"
         @click="finish"
       >
@@ -59,10 +64,14 @@ const totalSets = computed(() =>
     </h1>
 
     <ul class="flex flex-col gap-4">
-      <li v-for="ex in workout.exercises" :key="ex.id" class="rounded-2xl bg-neutral-900 p-4">
+      <li
+        v-for="ex in workout.exercises"
+        :key="ex.id"
+        class="rounded-2xl border border-neutral-200 bg-white p-4"
+      >
         <div class="mb-3 flex items-baseline justify-between">
           <p class="font-medium">{{ ex.name || 'Exercise' }}</p>
-          <p class="text-sm text-neutral-500">{{ ex.reps }} reps</p>
+          <p class="text-sm text-neutral-400">{{ ex.reps }} reps</p>
         </div>
         <div class="flex flex-wrap gap-2">
           <button
@@ -71,8 +80,8 @@ const totalSets = computed(() =>
             class="h-11 w-11 rounded-xl text-sm font-medium transition"
             :class="
               done.has(key(ex.id, n))
-                ? 'bg-white text-neutral-950'
-                : 'bg-neutral-800 text-neutral-400'
+                ? 'bg-neutral-900 text-white'
+                : 'border border-neutral-200 bg-white text-neutral-400'
             "
             @click="toggle(ex.id, n)"
           >
@@ -83,5 +92,5 @@ const totalSets = computed(() =>
     </ul>
   </template>
 
-  <p v-else class="py-12 text-center text-neutral-500">Workout not found.</p>
+  <p v-else class="py-12 text-center text-neutral-400">Workout not found.</p>
 </template>
