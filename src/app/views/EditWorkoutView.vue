@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import {
   useWorkoutsStore,
   emptyWorkout,
@@ -10,12 +10,22 @@ import {
 const props = defineProps({ id: { type: String, default: null } })
 
 const store = useWorkoutsStore()
+const route = useRoute()
 const router = useRouter()
 
 // Edit a copy so changes only persist on Save.
 const existing = props.id ? store.get(props.id) : null
+const type = existing
+  ? existing.type === 'hiit'
+    ? 'hiit'
+    : 'reps'
+  : route.query.type === 'hiit'
+    ? 'hiit'
+    : 'reps'
+const isHiit = type === 'hiit'
+
 const workout = ref(
-  existing ? JSON.parse(JSON.stringify(existing)) : emptyWorkout(),
+  existing ? JSON.parse(JSON.stringify(existing)) : emptyWorkout(type),
 )
 
 function leaveTo() {
@@ -23,7 +33,7 @@ function leaveTo() {
 }
 
 function addExercise() {
-  workout.value.exercises.push(emptyExercise())
+  workout.value.exercises.push(emptyExercise(type))
 }
 
 function removeExercise(index) {
@@ -31,8 +41,10 @@ function removeExercise(index) {
 }
 
 function save() {
-  store.save(workout.value)
-  router.push(leaveTo())
+  // Land on the saved workout's detail screen (works for new + existing) so a
+  // newly created workout never appears to "vanish" behind the list's tab.
+  const id = store.save(workout.value)
+  router.push({ name: 'detail', params: { id } })
 }
 
 function destroy() {
@@ -45,7 +57,9 @@ function destroy() {
 <template>
   <header class="flex items-center justify-between py-6">
     <RouterLink :to="leaveTo()" class="text-neutral-400">Cancel</RouterLink>
-    <h1 class="text-lg font-semibold">{{ existing ? 'Edit' : 'New' }} workout</h1>
+    <h1 class="text-lg font-semibold">
+      {{ existing ? 'Edit' : 'New' }} {{ isHiit ? 'HIIT ' : '' }}workout
+    </h1>
     <button class="font-medium text-neutral-900" @click="save">Save</button>
   </header>
 
@@ -53,10 +67,23 @@ function destroy() {
     v-model="workout.name"
     type="text"
     placeholder="Workout name"
-    class="mb-6 w-full rounded-2xl border border-neutral-200 bg-white px-5 py-4 text-lg outline-none placeholder:text-neutral-400 focus:border-neutral-400"
+    class="mb-4 w-full rounded-2xl border border-neutral-200 bg-white px-5 py-4 text-lg outline-none placeholder:text-neutral-400 focus:border-neutral-400"
   />
 
-  <ul class="flex flex-col gap-4">
+  <label
+    v-if="isHiit"
+    class="mb-6 flex items-center justify-between rounded-2xl border border-neutral-200 bg-white px-5 py-3"
+  >
+    <span class="font-medium">Rounds</span>
+    <input
+      v-model.number="workout.rounds"
+      type="number"
+      min="1"
+      class="w-20 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-right text-base outline-none focus:border-neutral-400"
+    />
+  </label>
+
+  <ul class="flex flex-col gap-4" :class="{ 'mt-2': !isHiit }">
     <li
       v-for="(ex, i) in workout.exercises"
       :key="ex.id"
@@ -75,17 +102,25 @@ function destroy() {
       </div>
       <div class="flex gap-3">
         <label class="flex flex-1 flex-col gap-1 text-xs text-neutral-400">
-          Sets
+          {{ isHiit ? 'Work (sec)' : 'Sets' }}
           <input
-            v-model.number="ex.sets"
+            v-model.number="ex[isHiit ? 'work' : 'sets']"
             type="number"
             min="1"
             class="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-base text-neutral-900 outline-none focus:border-neutral-400"
           />
         </label>
         <label class="flex flex-1 flex-col gap-1 text-xs text-neutral-400">
-          Reps
+          {{ isHiit ? 'Rest (sec)' : 'Reps' }}
           <input
+            v-if="isHiit"
+            v-model.number="ex.rest"
+            type="number"
+            min="0"
+            class="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-base text-neutral-900 outline-none focus:border-neutral-400"
+          />
+          <input
+            v-else
             v-model="ex.reps"
             type="text"
             class="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-base text-neutral-900 outline-none focus:border-neutral-400"

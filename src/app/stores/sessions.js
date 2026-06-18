@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
+import { buildTimeline, timelineDuration } from '../hiit'
 
 // Completed workout sessions (history) + in-progress check-off state so a
 // perform session can be resumed after leaving the screen. Local-first, same
@@ -58,6 +59,21 @@ export const useSessionsStore = defineStore('sessions', () => {
     clearProgress(workout.id)
   }
 
+  // HIIT sessions complete in full (the timer runs the whole thing), so record
+  // on finish with a rounds + duration summary.
+  function recordHiitSession(workout) {
+    sessions.value.push({
+      id: crypto.randomUUID(),
+      workoutId: workout.id,
+      workoutName: workout.name || 'Untitled',
+      type: 'hiit',
+      completedAt: new Date().toISOString(),
+      rounds: Number(workout.rounds) || 1,
+      seconds: timelineDuration(buildTimeline(workout)),
+    })
+    clearProgress(workout.id)
+  }
+
   function sessionsFor(workoutId) {
     return sessions.value
       .filter((s) => s.workoutId === workoutId)
@@ -90,6 +106,7 @@ export const useSessionsStore = defineStore('sessions', () => {
     setProgress,
     clearProgress,
     recordSession,
+    recordHiitSession,
     sessionsFor,
     lastPerformed,
     importSessions,

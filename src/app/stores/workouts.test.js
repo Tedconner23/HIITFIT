@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
-import { useWorkoutsStore } from './workouts'
+import { useWorkoutsStore, emptyWorkout, emptyExercise } from './workouts'
 
 describe('workouts store', () => {
   beforeEach(() => {
@@ -70,6 +70,19 @@ describe('workouts store', () => {
     ])
     expect(n).toBe(1)
     expect(store.get('x').name).toBe('backup-new')
+  })
+
+  it('builds empty reps and HIIT workout shapes', () => {
+    const reps = emptyWorkout()
+    expect(reps.type).toBe('reps')
+    expect(reps.rounds).toBeUndefined()
+    expect(reps.exercises[0]).toMatchObject({ sets: 3, reps: '10' })
+
+    const hiit = emptyWorkout('hiit')
+    expect(hiit.type).toBe('hiit')
+    expect(hiit.rounds).toBe(3)
+    expect(hiit.exercises[0]).toMatchObject({ work: 40, rest: 20 })
+    expect(emptyExercise('hiit')).toMatchObject({ work: 40, rest: 20 })
   })
 
   it('importMerge rejects non-arrays and skips malformed entries', () => {

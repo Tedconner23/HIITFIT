@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useWorkoutsStore } from '../stores/workouts'
 import { useSessionsStore } from '../stores/sessions'
-import { formatDate } from '../format'
+import { formatDate, formatDuration } from '../format'
 
 const props = defineProps({ id: { type: String, required: true } })
 
@@ -11,6 +11,13 @@ const store = useWorkoutsStore()
 const sessions = useSessionsStore()
 const workout = computed(() => store.get(props.id))
 const history = computed(() => sessions.sessionsFor(props.id))
+const isHiit = computed(() => workout.value?.type === 'hiit')
+
+function summary(s) {
+  return s.type === 'hiit'
+    ? `${s.rounds} rounds · ${formatDuration(s.seconds)}`
+    : `${s.setsDone}/${s.setsTotal} sets`
+}
 </script>
 
 <template>
@@ -27,12 +34,13 @@ const history = computed(() => sessions.sessionsFor(props.id))
 
     <h1 class="text-2xl font-semibold tracking-tight">{{ workout.name || 'Untitled' }}</h1>
     <p class="mt-1 text-sm text-neutral-400">
+      <template v-if="isHiit">{{ workout.rounds }} rounds · </template>
       {{ workout.exercises.length }}
       {{ workout.exercises.length === 1 ? 'exercise' : 'exercises' }}
     </p>
 
     <RouterLink
-      :to="{ name: 'perform', params: { id: workout.id } }"
+      :to="{ name: isHiit ? 'hiit' : 'perform', params: { id: workout.id } }"
       class="mt-6 block rounded-2xl bg-neutral-900 py-4 text-center font-medium text-white"
     >
       Start workout
@@ -45,7 +53,9 @@ const history = computed(() => sessions.sessionsFor(props.id))
         class="flex items-center justify-between rounded-xl border border-neutral-200 bg-white px-4 py-3"
       >
         <span class="font-medium">{{ ex.name || 'Exercise' }}</span>
-        <span class="text-sm text-neutral-400">{{ ex.sets }} × {{ ex.reps }}</span>
+        <span class="text-sm text-neutral-400">
+          {{ isHiit ? `${ex.work}s work · ${ex.rest}s rest` : `${ex.sets} × ${ex.reps}` }}
+        </span>
       </li>
     </ul>
 
@@ -58,7 +68,7 @@ const history = computed(() => sessions.sessionsFor(props.id))
           class="flex justify-between rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm"
         >
           <span>{{ formatDate(s.completedAt) }}</span>
-          <span class="text-neutral-400">{{ s.setsDone }}/{{ s.setsTotal }} sets</span>
+          <span class="text-neutral-400">{{ summary(s) }}</span>
         </li>
       </ul>
     </section>

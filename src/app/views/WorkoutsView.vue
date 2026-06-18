@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useWorkoutsStore } from '../stores/workouts'
 import { useSessionsStore } from '../stores/sessions'
@@ -9,10 +9,22 @@ import SwipeRow from '../components/SwipeRow.vue'
 const store = useWorkoutsStore()
 const sessions = useSessionsStore()
 const fileInput = ref(null)
+const tab = ref('reps')
 
-function lastLabel(id) {
-  const at = sessions.lastPerformed(id)
-  return at ? `last ${formatDate(at)}` : 'not performed yet'
+const list = computed(() =>
+  store.workouts.filter((w) =>
+    tab.value === 'hiit' ? w.type === 'hiit' : w.type !== 'hiit',
+  ),
+)
+
+function subtitle(w) {
+  const at = sessions.lastPerformed(w.id)
+  const last = at ? `last ${formatDate(at)}` : 'not performed yet'
+  const count =
+    w.type === 'hiit'
+      ? `${w.rounds} ${w.rounds === 1 ? 'round' : 'rounds'}`
+      : `${w.exercises.length} ${w.exercises.length === 1 ? 'exercise' : 'exercises'}`
+  return `${count} · ${last}`
 }
 
 function confirmDelete(w) {
@@ -55,19 +67,37 @@ async function restore(event) {
   <header class="flex items-center justify-between py-6">
     <h1 class="text-2xl font-semibold tracking-tight">Workouts</h1>
     <RouterLink
-      :to="{ name: 'new' }"
+      :to="{ name: 'new', query: { type: tab } }"
       class="rounded-full bg-neutral-900 px-4 py-2 text-sm font-medium text-white"
     >
       + New
     </RouterLink>
   </header>
 
-  <p v-if="store.workouts.length === 0" class="py-16 text-center text-neutral-400">
-    No workouts yet. Tap <span class="text-neutral-600">+ New</span> to build one.
+  <div class="mb-5 flex rounded-full bg-neutral-100 p-1 text-sm">
+    <button
+      class="flex-1 rounded-full py-2 transition"
+      :class="tab === 'reps' ? 'bg-white font-medium shadow-sm' : 'text-neutral-500'"
+      @click="tab = 'reps'"
+    >
+      Reps
+    </button>
+    <button
+      class="flex-1 rounded-full py-2 transition"
+      :class="tab === 'hiit' ? 'bg-white font-medium shadow-sm' : 'text-neutral-500'"
+      @click="tab = 'hiit'"
+    >
+      HIIT
+    </button>
+  </div>
+
+  <p v-if="list.length === 0" class="py-16 text-center text-neutral-400">
+    No {{ tab === 'hiit' ? 'HIIT' : 'rep' }} workouts yet.
+    Tap <span class="text-neutral-600">+ New</span> to build one.
   </p>
 
   <ul v-else class="flex flex-col gap-3">
-    <li v-for="w in store.workouts" :key="w.id">
+    <li v-for="w in list" :key="w.id">
       <SwipeRow @delete="confirmDelete(w)">
         <RouterLink
           :to="{ name: 'detail', params: { id: w.id } }"
@@ -75,11 +105,7 @@ async function restore(event) {
         >
           <span>
             <span class="block font-medium">{{ w.name || 'Untitled' }}</span>
-            <span class="mt-0.5 block text-sm text-neutral-400">
-              {{ w.exercises.length }}
-              {{ w.exercises.length === 1 ? 'exercise' : 'exercises' }}
-              · {{ lastLabel(w.id) }}
-            </span>
+            <span class="mt-0.5 block text-sm text-neutral-400">{{ subtitle(w) }}</span>
           </span>
           <span class="text-lg text-neutral-300">›</span>
         </RouterLink>

@@ -67,10 +67,14 @@ export const useWorkoutsStore = defineStore('workouts', () => {
   return { workouts, get, save, remove, importMerge }
 })
 
-export function emptyExercise() {
-  return { id: crypto.randomUUID(), name: '', sets: 3, reps: '10' }
+export function emptyExercise(type = 'reps') {
+  return type === 'hiit'
+    ? { id: crypto.randomUUID(), name: '', work: 40, rest: 20 }
+    : { id: crypto.randomUUID(), name: '', sets: 3, reps: '10' }
 }
 
-export function emptyWorkout() {
-  return { id: null, name: '', exercises: [emptyExercise()] }
+export function emptyWorkout(type = 'reps') {
+  const workout = { id: null, name: '', type, exercises: [emptyExercise(type)] }
+  if (type === 'hiit') workout.rounds = 3
+  return workout
 }

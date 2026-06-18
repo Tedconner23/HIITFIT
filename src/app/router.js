@@ -3,6 +3,7 @@ import WorkoutsView from './views/WorkoutsView.vue'
 import WorkoutDetailView from './views/WorkoutDetailView.vue'
 import EditWorkoutView from './views/EditWorkoutView.vue'
 import PerformView from './views/PerformView.vue'
+import HiitPlayerView from './views/HiitPlayerView.vue'
 
 const router = createRouter({
   history: createWebHistory('/app/'),
@@ -12,6 +13,7 @@ const router = createRouter({
     { path: '/workout/:id', name: 'detail', component: WorkoutDetailView, props: true },
     { path: '/edit/:id', name: 'edit', component: EditWorkoutView, props: true },
     { path: '/perform/:id', name: 'perform', component: PerformView, props: true },
+    { path: '/hiit/:id', name: 'hiit', component: HiitPlayerView, props: true },
   ],
 })
 

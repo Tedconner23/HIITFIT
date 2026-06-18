@@ -58,6 +58,24 @@ describe('sessions store', () => {
     expect(s.lastPerformed('never')).toBeNull()
   })
 
+  it('records a HIIT session with rounds and duration summary', () => {
+    const s = useSessionsStore()
+    s.recordHiitSession({
+      id: 'h1',
+      name: 'Tabata',
+      rounds: 2,
+      exercises: [{ id: 'a', name: 'Burpees', work: 20, rest: 10 }],
+    })
+    expect(s.sessions).toHaveLength(1)
+    expect(s.sessions[0]).toMatchObject({
+      workoutId: 'h1',
+      type: 'hiit',
+      rounds: 2,
+    })
+    // round = 20+10 = 30; ×2 = 60; minus trimmed final rest (10) = 50
+    expect(s.sessions[0].seconds).toBe(50)
+  })
+
   it('importSessions adds unseen ids only', () => {
     const s = useSessionsStore()
     s.sessions.push({ id: 'a', workoutId: 'w1', completedAt: '2026-06-01T00:00:00Z' })
