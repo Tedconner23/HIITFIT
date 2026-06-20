@@ -6,6 +6,7 @@ import {
   emptyWorkout,
   emptyExercise,
 } from '../stores/workouts'
+import { EXERCISE_NAMES } from '../exercises'
 
 const props = defineProps({ id: { type: String, default: null } })
 
@@ -101,6 +102,8 @@ function destroy() {
           v-model="ex.name"
           type="text"
           placeholder="Exercise"
+          list="exercise-options"
+          autocomplete="off"
           class="flex-1 bg-transparent text-base outline-none placeholder:text-neutral-400"
         />
         <button
@@ -173,6 +176,10 @@ function destroy() {
       </div>
     </li>
   </ul>
+
+  <datalist id="exercise-options">
+    <option v-for="name in EXERCISE_NAMES" :key="name" :value="name" />
+  </datalist>
 
   <button
     class="mt-4 w-full rounded-2xl border border-dashed border-neutral-300 py-4 text-neutral-500"

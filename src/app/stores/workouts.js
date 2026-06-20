@@ -83,10 +83,74 @@ export const useWorkoutsStore = defineStore('workouts', () => {
         ],
       }),
       mk({
+        name: 'Push Day',
+        type: 'reps',
+        exercises: [
+          ex({ name: 'Bench Press', sets: 4, reps: '8', rest: 90 }),
+          ex({ name: 'Overhead Press', sets: 3, reps: '10', rest: 75 }),
+          ex({ name: 'Incline Dumbbell Press', sets: 3, reps: '10', rest: 75 }),
+          ex({ name: 'Lateral Raise', sets: 3, reps: '15', rest: 45 }),
+          ex({ name: 'Tricep Dips', sets: 3, reps: '12', rest: 60 }),
+        ],
+      }),
+      mk({
+        name: 'Pull Day',
+        type: 'reps',
+        exercises: [
+          ex({ name: 'Pull-ups', sets: 4, reps: '8', rest: 90 }),
+          ex({ name: 'Bent-over Row', sets: 3, reps: '10', rest: 75 }),
+          ex({ name: 'Lat Pulldown', sets: 3, reps: '12', rest: 60 }),
+          ex({ name: 'Face Pull', sets: 3, reps: '15', rest: 45 }),
+          ex({ name: 'Bicep Curl', sets: 3, reps: '12', rest: 60 }),
+        ],
+      }),
+      mk({
+        name: 'Leg Day',
+        type: 'reps',
+        exercises: [
+          ex({ name: 'Squats', sets: 4, reps: '8', rest: 120 }),
+          ex({ name: 'Romanian Deadlift', sets: 3, reps: '10', rest: 90 }),
+          ex({ name: 'Bulgarian Split Squat', sets: 3, reps: '10', rest: 75 }),
+          ex({ name: 'Leg Curl', sets: 3, reps: '12', rest: 60 }),
+          ex({ name: 'Calf Raises', sets: 4, reps: '15', rest: 45 }),
+        ],
+      }),
+      mk({
+        name: 'Core Crusher',
+        type: 'reps',
+        exercises: [
+          ex({ name: 'Plank', sets: 3, reps: '45s', rest: 45 }),
+          ex({ name: 'Bicycle Crunches', sets: 3, reps: '20', rest: 45 }),
+          ex({ name: 'Russian Twists', sets: 3, reps: '20', rest: 45 }),
+          ex({ name: 'Leg Raises', sets: 3, reps: '15', rest: 45 }),
+        ],
+      }),
+      mk({
         name: 'Tabata',
         type: 'hiit',
         rounds: 8,
         exercises: [ex({ name: 'Burpees', work: 20, rest: 10 })],
+      }),
+      mk({
+        name: 'HIIT Circuit',
+        type: 'hiit',
+        rounds: 3,
+        exercises: [
+          ex({ name: 'Jumping Jacks', work: 40, rest: 20 }),
+          ex({ name: 'Mountain Climbers', work: 40, rest: 20 }),
+          ex({ name: 'High Knees', work: 40, rest: 20 }),
+          ex({ name: 'Squat Jumps', work: 40, rest: 20 }),
+        ],
+      }),
+      mk({
+        name: 'Cardio Blast',
+        type: 'hiit',
+        rounds: 4,
+        exercises: [
+          ex({ name: 'Burpees', work: 30, rest: 15 }),
+          ex({ name: 'Skaters', work: 30, rest: 15 }),
+          ex({ name: 'Box Jumps', work: 30, rest: 15 }),
+        ],
       }),
     )
   }

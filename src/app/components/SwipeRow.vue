@@ -20,14 +20,20 @@ function onDown(e) {
   wasOpen = offset.value !== 0
   startX = e.clientX
   startOffset = offset.value
-  e.currentTarget.setPointerCapture?.(e.pointerId)
+  // NB: do NOT capture the pointer here. Capturing on pointerdown makes the
+  // browser dispatch the resulting `click` on this wrapper instead of the
+  // <a> link inside the slot, which silently breaks row navigation. We only
+  // capture once an actual drag begins (see onMove).
 }
 
 function onMove(e) {
   if (!dragging.value) return
   const dx = e.clientX - startX
-  if (Math.abs(dx) > 6) moved = true
-  offset.value = Math.min(0, Math.max(-REVEAL, startOffset + dx))
+  if (Math.abs(dx) > 6 && !moved) {
+    moved = true
+    e.currentTarget.setPointerCapture?.(e.pointerId)
+  }
+  if (moved) offset.value = Math.min(0, Math.max(-REVEAL, startOffset + dx))
 }
 
 function onUp() {

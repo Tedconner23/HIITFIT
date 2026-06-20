@@ -105,11 +105,14 @@ describe('workouts store', () => {
   it('seeds example workouts only on the first run', () => {
     const store = useWorkoutsStore()
     store.seedIfFirstRun()
-    expect(store.workouts.length).toBe(2)
+    const seeded = store.workouts.length
+    expect(seeded).toBeGreaterThan(2)
+    expect(store.workouts.some((w) => w.type === 'hiit')).toBe(true)
+    expect(store.workouts.some((w) => w.type === 'reps')).toBe(true)
     expect(localStorage.getItem('seeded')).toBe('1')
     // second call is a no-op
     store.seedIfFirstRun()
-    expect(store.workouts.length).toBe(2)
+    expect(store.workouts.length).toBe(seeded)
   })
 
   it('importMerge rejects non-arrays and skips malformed entries', () => {
