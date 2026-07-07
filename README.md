@@ -4,6 +4,12 @@ A workout PWA for planning, building, and performing workouts on your phone —
 with both **rep-based** strength workouts and **timed HIIT** circuits.
 Local-first: works offline, no account required.
 
+**Goal:** an app-store fitness app (the PWA is the testing vehicle) with custom
+workouts, check-off rep training, and fully automated HIIT/Tabata — the app cues
+every work/rest/exercise switch so time-based training needs no interaction.
+See [`knowledge/roadmap.md`](knowledge/roadmap.md) for the market gap assessment
+and prioritized next steps.
+
 ## Features
 
 - **Rep workouts** — build reusable templates (exercises with sets/reps), then

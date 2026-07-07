@@ -78,3 +78,6 @@ Tauri 2 is an alternative but much less mature for mobile. Capacitor is the safe
 - [ ] Supabase project created (Phase B)
 - [ ] Schema applied (Phase B) — `workouts` table, `data` jsonb, last-write-wins sync by `updatedAt`
 - [ ] Phase B: Supabase auth + sync
+
+For what to build next (goals, market gap assessment, prioritized tiers), see
+[`roadmap.md`](roadmap.md).
