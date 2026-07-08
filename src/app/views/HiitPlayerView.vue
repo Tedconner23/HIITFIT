@@ -4,7 +4,7 @@ import { RouterLink, useRouter } from 'vue-router'
 import { useWorkoutsStore } from '../stores/workouts'
 import { useSessionsStore } from '../stores/sessions'
 import { useSettingsStore } from '../stores/settings'
-import { buildTimeline, timelineDuration } from '../hiit'
+import { buildTimeline, timelineDuration, phasePanelClass } from '../hiit'
 import { formatDuration } from '../format'
 
 const props = defineProps({ id: { type: String, required: true } })
@@ -32,10 +32,8 @@ const remaining = ref(timeline[0]?.seconds ?? 0)
 
 const current = computed(() => timeline[index.value] ?? null)
 const next = computed(() => timeline[index.value + 1] ?? null)
-const panelClass = computed(() => {
-  if (current.value?.kind === 'work') return 'bg-neutral-900 text-white'
-  return 'bg-neutral-100 text-neutral-900'
-})
+// Full-screen color-coded phase panel — matches the native app's phase colors.
+const panelClass = computed(() => phasePanelClass(current.value?.kind))
 const phaseLabel = computed(() => {
   switch (current.value?.kind) {
     case 'work': return 'Work'

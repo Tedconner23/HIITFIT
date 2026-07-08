@@ -43,3 +43,19 @@ export function buildTimeline(workout) {
 export function timelineDuration(timeline) {
   return timeline.reduce((n, it) => n + it.seconds, 0)
 }
+
+// Full-screen phase color for the player panel — mirrors the native app's
+// Theme.phaseColor so the two clients read identically across the room:
+//   work → green, rest/round-rest → orange, warm-up → blue,
+//   cool-down → indigo, prep/get-ready → gray. White text stays readable on
+//   every panel. Full class strings are kept literal so Tailwind's scanner
+//   emits them. Unknown kinds fall back to the neutral get-ready panel.
+export function phasePanelClass(kind) {
+  switch (kind) {
+    case 'work':     return 'bg-green-600 text-white'
+    case 'rest':     return 'bg-orange-500 text-white'
+    case 'warmup':   return 'bg-blue-600 text-white'
+    case 'cooldown': return 'bg-indigo-600 text-white'
+    default:         return 'bg-neutral-500 text-white'
+  }
+}

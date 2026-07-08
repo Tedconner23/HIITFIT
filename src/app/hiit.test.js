@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildTimeline, timelineDuration } from './hiit'
+import { buildTimeline, timelineDuration, phasePanelClass } from './hiit'
 
 const workout = {
   rounds: 2,
@@ -71,5 +71,26 @@ describe('buildTimeline', () => {
     const base = buildTimeline(workout)
     const withZeros = buildTimeline({ ...workout, warmup: 0, cooldown: 0, restBetweenRounds: 0 })
     expect(withZeros).toEqual(base)
+  })
+})
+
+describe('phasePanelClass', () => {
+  it('maps each phase kind to its color (parity with the native app)', () => {
+    expect(phasePanelClass('work')).toBe('bg-green-600 text-white')
+    expect(phasePanelClass('rest')).toBe('bg-orange-500 text-white')
+    expect(phasePanelClass('warmup')).toBe('bg-blue-600 text-white')
+    expect(phasePanelClass('cooldown')).toBe('bg-indigo-600 text-white')
+    expect(phasePanelClass('prep')).toBe('bg-neutral-500 text-white')
+  })
+
+  it('falls back to the neutral get-ready panel for unknown/absent kinds', () => {
+    expect(phasePanelClass(undefined)).toBe('bg-neutral-500 text-white')
+    expect(phasePanelClass('bogus')).toBe('bg-neutral-500 text-white')
+  })
+
+  it('every panel keeps readable white text', () => {
+    for (const kind of ['work', 'rest', 'warmup', 'cooldown', 'prep']) {
+      expect(phasePanelClass(kind)).toContain('text-white')
+    }
   })
 })
