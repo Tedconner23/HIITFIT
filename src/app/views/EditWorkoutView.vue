@@ -78,18 +78,52 @@ function destroy() {
     class="mb-4 w-full rounded-2xl border border-neutral-200 bg-white px-5 py-4 text-lg outline-none placeholder:text-neutral-400 focus:border-neutral-400"
   />
 
-  <label
-    v-if="isHiit"
-    class="mb-6 flex items-center justify-between rounded-2xl border border-neutral-200 bg-white px-5 py-3"
-  >
-    <span class="font-medium">Rounds</span>
-    <input
-      v-model.number="workout.rounds"
-      type="number"
-      min="1"
-      class="w-20 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-right text-base outline-none focus:border-neutral-400"
-    />
-  </label>
+  <template v-if="isHiit">
+    <label
+      class="mb-4 flex items-center justify-between rounded-2xl border border-neutral-200 bg-white px-5 py-3"
+    >
+      <span class="font-medium">Rounds</span>
+      <input
+        v-model.number="workout.rounds"
+        type="number"
+        min="1"
+        class="w-20 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-right text-base outline-none focus:border-neutral-400"
+      />
+    </label>
+
+    <div class="mb-6 grid grid-cols-3 gap-3">
+      <label class="flex flex-col gap-1 text-xs text-neutral-400">
+        Warm-up (sec)
+        <input
+          v-model.number="workout.warmup"
+          type="number"
+          min="0"
+          placeholder="0"
+          class="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-base text-neutral-900 outline-none focus:border-neutral-400"
+        />
+      </label>
+      <label class="flex flex-col gap-1 text-xs text-neutral-400">
+        Round rest (sec)
+        <input
+          v-model.number="workout.restBetweenRounds"
+          type="number"
+          min="0"
+          placeholder="0"
+          class="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-base text-neutral-900 outline-none focus:border-neutral-400"
+        />
+      </label>
+      <label class="flex flex-col gap-1 text-xs text-neutral-400">
+        Cool-down (sec)
+        <input
+          v-model.number="workout.cooldown"
+          type="number"
+          min="0"
+          placeholder="0"
+          class="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-base text-neutral-900 outline-none focus:border-neutral-400"
+        />
+      </label>
+    </div>
+  </template>
 
   <ul class="flex flex-col gap-4" :class="{ 'mt-2': !isHiit }">
     <li

@@ -20,9 +20,10 @@ function duplicate() {
 }
 
 function summary(s) {
-  return s.type === 'hiit'
-    ? `${s.rounds} rounds · ${formatDuration(s.seconds)}`
-    : `${s.setsDone}/${s.setsTotal} sets`
+  if (s.type === 'hiit') return `${s.rounds} rounds · ${formatDuration(s.seconds)}`
+  const sets = `${s.setsDone}/${s.setsTotal} sets`
+  // `seconds` only exists on newer rep sessions — older ones still render.
+  return s.seconds ? `${sets} · ${formatDuration(s.seconds)}` : sets
 }
 </script>
 

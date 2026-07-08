@@ -66,12 +66,28 @@ async function restore(event) {
 <template>
   <header class="flex items-center justify-between py-6">
     <h1 class="text-2xl font-semibold tracking-tight">Workouts</h1>
-    <RouterLink
-      :to="{ name: 'new', query: { type: tab } }"
-      class="rounded-full bg-neutral-900 px-4 py-2 text-sm font-medium text-white"
-    >
-      + New
-    </RouterLink>
+    <div class="flex items-center gap-3 text-sm">
+      <RouterLink
+        :to="{ name: 'consistency' }"
+        aria-label="Consistency"
+        class="text-neutral-400"
+      >
+        Progress
+      </RouterLink>
+      <RouterLink
+        :to="{ name: 'settings' }"
+        aria-label="Settings"
+        class="text-neutral-400"
+      >
+        Settings
+      </RouterLink>
+      <RouterLink
+        :to="{ name: 'new', query: { type: tab } }"
+        class="rounded-full bg-neutral-900 px-4 py-2 font-medium text-white"
+      >
+        + New
+      </RouterLink>
+    </div>
   </header>
 
   <div class="mb-5 flex rounded-full bg-neutral-100 p-1 text-sm">
