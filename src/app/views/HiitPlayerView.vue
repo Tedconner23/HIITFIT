@@ -3,13 +3,15 @@ import { ref, computed, onUnmounted } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { useWorkoutsStore } from '../stores/workouts'
 import { useSessionsStore } from '../stores/sessions'
-import { buildTimeline, timelineDuration } from '../hiit'
+import { useSettingsStore } from '../stores/settings'
+import { buildTimeline, timelineDuration, phasePanelClass } from '../hiit'
 import { formatDuration } from '../format'
 
 const props = defineProps({ id: { type: String, required: true } })
 
 const store = useWorkoutsStore()
 const sessions = useSessionsStore()
+const { settings } = useSettingsStore()
 const router = useRouter()
 const workout = store.get(props.id)
 
@@ -18,6 +20,10 @@ const timeline = workout
   ? [{ kind: 'prep', name: 'Get ready', seconds: PREP, round: 0 }, ...buildTimeline(workout)]
   : []
 const totalDuration = workout ? timelineDuration(buildTimeline(workout)) : 0
+// Whole timeline including the lead-in, so elapsed reaches this at the finish.
+const grandTotal = timelineDuration(timeline)
+// Everything the user actually performs (the "Interval N / M" denominator).
+const intervalTotal = timeline.filter((it) => it.kind !== 'prep').length
 
 const started = ref(false)
 const paused = ref(false)
@@ -26,9 +32,24 @@ const remaining = ref(timeline[0]?.seconds ?? 0)
 
 const current = computed(() => timeline[index.value] ?? null)
 const next = computed(() => timeline[index.value + 1] ?? null)
-const panelClass = computed(() => {
-  if (current.value?.kind === 'work') return 'bg-neutral-900 text-white'
-  return 'bg-neutral-100 text-neutral-900'
+// Full-screen color-coded phase panel — matches the native app's phase colors.
+const panelClass = computed(() => phasePanelClass(current.value?.kind))
+const phaseLabel = computed(() => {
+  switch (current.value?.kind) {
+    case 'work': return 'Work'
+    case 'rest': return 'Rest'
+    case 'warmup': return 'Warm-up'
+    case 'cooldown': return 'Cool-down'
+    default: return 'Get ready'
+  }
+})
+// The prep lead-in is index 0; performed intervals are 1-based after it.
+const intervalNumber = computed(() => Math.max(0, Math.min(index.value, intervalTotal)))
+const elapsed = computed(() => {
+  let e = 0
+  for (let i = 0; i < index.value; i++) e += timeline[i].seconds
+  e += (timeline[index.value]?.seconds ?? 0) - remaining.value
+  return Math.max(0, e)
 })
 
 let intervalEnd = 0
@@ -37,7 +58,7 @@ let audioCtx = null
 let wakeLock = null
 
 function beep(freq, dur = 0.15) {
-  if (!audioCtx) return
+  if (!audioCtx || !settings.sound) return
   const o = audioCtx.createOscillator()
   const g = audioCtx.createGain()
   o.type = 'sine'
@@ -80,10 +101,34 @@ async function requestWakeLock() {
 }
 
 function vibrate(ms) {
+  if (!settings.vibration) return
   try {
     navigator.vibrate?.(ms)
   } catch {
     // ignore
+  }
+}
+
+// Spoken cues via the browser's speech synthesis — no dependencies.
+function speak(text) {
+  if (!settings.voice) return
+  try {
+    const synth = window.speechSynthesis
+    if (!synth) return
+    synth.cancel()
+    synth.speak(new SpeechSynthesisUtterance(text))
+  } catch {
+    // ignore
+  }
+}
+
+function announce(item) {
+  switch (item?.kind) {
+    case 'work': return speak(`Work. ${item.name}`)
+    case 'rest': return speak('Rest')
+    case 'warmup': return speak('Warm up')
+    case 'cooldown': return speak('Cool down')
+    case 'prep': return speak('Get ready')
   }
 }
 
@@ -93,6 +138,7 @@ function beginAt(i) {
   intervalEnd = Date.now() + timeline[i].seconds * 1000
   vibrate(timeline[i].kind === 'work' ? 80 : 40)
   if (timeline[i].kind === 'work') beep(880, 0.18)
+  announce(timeline[i])
 }
 
 function togglePause() {
@@ -132,11 +178,17 @@ function cleanup() {
     // ignore
   }
   wakeLock = null
+  try {
+    window.speechSynthesis?.cancel()
+  } catch {
+    // ignore
+  }
 }
 
 function finish() {
   cleanup()
   beep(990, 0.4)
+  speak('Workout complete')
   sessions.recordHiitSession(workout)
   router.push({ name: 'detail', params: { id: workout.id } })
 }
@@ -197,15 +249,30 @@ onUnmounted(cleanup)
       class="flex min-h-[60vh] flex-col items-center justify-center gap-4 rounded-3xl p-8 text-center transition-colors"
       :class="panelClass"
     >
-      <p class="text-sm uppercase tracking-widest opacity-60">
-        {{ current?.kind === 'work' ? 'Work' : current?.kind === 'rest' ? 'Rest' : 'Get ready' }}
-      </p>
+      <p class="text-sm uppercase tracking-widest opacity-60">{{ phaseLabel }}</p>
       <p class="text-2xl font-semibold">{{ current?.name }}</p>
       <p class="text-7xl font-bold tabular-nums">{{ remaining }}</p>
       <p class="opacity-60">
         <template v-if="next">Next: {{ next.name }}</template>
         <template v-else>Last one!</template>
       </p>
+    </div>
+
+    <div class="mt-4 flex items-center justify-between text-sm text-neutral-400">
+      <span class="tabular-nums">
+        {{ formatDuration(elapsed) }} / {{ formatDuration(grandTotal) }}
+      </span>
+      <span v-if="intervalNumber >= 1" class="tabular-nums">
+        Interval {{ intervalNumber }} / {{ intervalTotal }}
+      </span>
+      <span v-else class="tabular-nums">Get ready</span>
+    </div>
+
+    <div class="mt-2 h-1.5 overflow-hidden rounded-full bg-neutral-200">
+      <div
+        class="h-full bg-neutral-900 transition-all"
+        :style="{ width: `${grandTotal ? (elapsed / grandTotal) * 100 : 0}%` }"
+      ></div>
     </div>
 
     <div class="mt-4 flex gap-3">

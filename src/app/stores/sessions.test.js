@@ -45,6 +45,14 @@ describe('sessions store', () => {
     expect(s.getProgress('w1')).toEqual([])
   })
 
+  it('records an optional session duration and omits it when absent', () => {
+    const s = useSessionsStore()
+    s.recordSession(workout, ['e1:1'], 372)
+    expect(s.sessions[0].seconds).toBe(372)
+    s.recordSession(workout, ['e1:1'])
+    expect('seconds' in s.sessions[1]).toBe(false)
+  })
+
   it('returns sessions for a workout newest-first', () => {
     const s = useSessionsStore()
     s.sessions.push(

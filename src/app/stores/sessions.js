@@ -42,8 +42,9 @@ export const useSessionsStore = defineStore('sessions', () => {
   }
 
   // Record a completed session from the workout template + checked-set keys,
-  // then clear that workout's in-progress state.
-  function recordSession(workout, doneKeys) {
+  // then clear that workout's in-progress state. `seconds` (how long the perform
+  // took) is optional — older sessions don't have it and must still render.
+  function recordSession(workout, doneKeys, seconds) {
     const setsTotal = workout.exercises.reduce(
       (n, ex) => n + (Number(ex.sets) || 0),
       0,
@@ -55,6 +56,7 @@ export const useSessionsStore = defineStore('sessions', () => {
       completedAt: new Date().toISOString(),
       setsDone: doneKeys.length,
       setsTotal,
+      ...(Number(seconds) > 0 ? { seconds: Math.round(seconds) } : {}),
     })
     clearProgress(workout.id)
   }

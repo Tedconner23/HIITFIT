@@ -3,14 +3,19 @@ import { ref, computed, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useWorkoutsStore } from '../stores/workouts'
 import { useSessionsStore } from '../stores/sessions'
+import { useSettingsStore } from '../stores/settings'
 import { formatDuration } from '../format'
 
 const props = defineProps({ id: { type: String, required: true } })
 
 const store = useWorkoutsStore()
 const sessions = useSessionsStore()
+const { settings } = useSettingsStore()
 const router = useRouter()
 const workout = store.get(props.id)
+
+// When this perform began, to record how long the session took.
+const startedAt = Date.now()
 
 // Seed from any saved in-progress state so leaving and returning resumes.
 // Keys are `${exerciseId}:${setIndex}`.
@@ -38,7 +43,7 @@ function ensureAudio() {
 }
 
 function beep(freq, dur = 0.15) {
-  if (!audioCtx) return
+  if (!audioCtx || !settings.sound) return
   const o = audioCtx.createOscillator()
   const g = audioCtx.createGain()
   o.type = 'sine'
@@ -100,7 +105,8 @@ function toggle(exId, setIndex) {
 
 function finish() {
   stopRest()
-  sessions.recordSession(workout, [...done.value])
+  const seconds = Math.round((Date.now() - startedAt) / 1000)
+  sessions.recordSession(workout, [...done.value], seconds)
   done.value = new Set()
   router.push({ name: 'detail', params: { id: workout.id } })
 }
