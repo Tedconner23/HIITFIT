@@ -3,6 +3,20 @@
 *Written 2026-07-07. Gap assessment based on current market leaders: Hevy / Strong (rep
 tracking) and Seconds Pro / Tabata Timer / Interval Timer (interval training).*
 
+> **Status snapshot — 2026-07-14.** Tier 0 partial (Vercel deploy still pending
+> user's account; real-device pass still pending). Tier 1 shipped in the same-day
+> `Roadmap parity` PR (#1) that landed after this doc was written: voice
+> announcements, warm-up / cool-down / rest-between-rounds, settings screen, and
+> full-screen color-coded phases (PR #2). Tier 2 also shipped: consistency view
+> (`ConsistencyView.vue` + `stats.js`) and session duration (recorded in
+> `PerformView.vue` and `HiitPlayerView.vue`). Tier 3 still open: no Supabase
+> integration yet, no Capacitor wrap yet. The iOS sibling (`HIITFIT-ios`) is
+> feature-complete against this roadmap and shipped to internal TestFlight (Build
+> 3, `com.swdatasci.hiitfitios`); it also carries an unmentioned addition — no-login
+> iCloud key-value sync of workouts + history across the user's Apple devices.
+> Deferred by design in both clients: supersets, per-exercise notes, muscle-group
+> tags, richer onboarding.
+
 ## Product Goal
 
 A fitness app that eventually ships to the **app stores** (the PWA is the testing

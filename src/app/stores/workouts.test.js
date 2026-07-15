@@ -115,6 +115,45 @@ describe('workouts store', () => {
     expect(store.workouts.length).toBe(seeded)
   })
 
+  it('save preserves optional HIIT parameters (warmup / cooldown / restBetweenRounds)', () => {
+    const store = useWorkoutsStore()
+    const id = store.save({
+      id: null,
+      name: 'Tabata',
+      type: 'hiit',
+      rounds: 4,
+      warmup: 60,
+      cooldown: 45,
+      restBetweenRounds: 30,
+      exercises: [{ id: 'e1', name: 'Burpees', work: 20, rest: 10 }],
+    })
+    const saved = store.get(id)
+    expect(saved.warmup).toBe(60)
+    expect(saved.cooldown).toBe(45)
+    expect(saved.restBetweenRounds).toBe(30)
+  })
+
+  it('importMerge round-trips optional HIIT parameters unchanged', () => {
+    const store = useWorkoutsStore()
+    const imported = {
+      id: 'from-ios',
+      name: 'From iOS',
+      type: 'hiit',
+      rounds: 3,
+      warmup: 30,
+      cooldown: 60,
+      restBetweenRounds: 15,
+      exercises: [{ id: 'e', name: 'Squats', work: 30, rest: 10 }],
+      updatedAt: '2026-07-14T00:00:00Z',
+    }
+    const n = store.importMerge([imported])
+    expect(n).toBe(1)
+    const w = store.get('from-ios')
+    expect(w.warmup).toBe(30)
+    expect(w.cooldown).toBe(60)
+    expect(w.restBetweenRounds).toBe(15)
+  })
+
   it('importMerge rejects non-arrays and skips malformed entries', () => {
     const store = useWorkoutsStore()
     expect(() => store.importMerge({})).toThrow()
