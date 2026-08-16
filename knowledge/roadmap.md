@@ -83,11 +83,14 @@ at Capacitor time also resolves Apple's "wrapped website" rejection risk.
 2. Real-device pass: visual review of the UI/UX theme, SwipeRow tap, beep/haptic
    feel, Backup/Restore click-test.
 
-**Tier 1 — complete the "fully automated HIIT" promise (PWA-doable now)**
-3. Voice announcements via `speechSynthesis` (announce next exercise, phase changes).
-4. Rest-between-rounds + warm-up/cool-down intervals in the HIIT model + player.
-5. Total-progress display during play (elapsed / remaining / interval count).
-6. Settings screen: sound, vibration, voice toggles.
+**Tier 1 — complete the "fully automated HIIT" promise (PWA-doable now)** — ✅ built 2026-07-07 (30 unit tests + build pass; device pass still pending — see tech-stack Status)
+3. ~~Voice announcements via `speechSynthesis` (announce next exercise, phase changes).~~ ✅
+4. ~~Rest-between-rounds + warm-up/cool-down intervals in the HIIT model + player.~~ ✅
+5. ~~Total-progress display during play (elapsed / remaining / interval count).~~ ✅
+6. ~~Settings screen: sound, vibration, voice toggles.~~ ✅
+
+   Remaining Tier 1-adjacent gap (deferred): music ducking + background/screen-off
+   operation are native-only — they wait for the Capacitor wrap (Tier 3).
 
 **Tier 2 — expected polish**
 7. Consistency view from existing session data (streaks / weekly counts).
@@ -95,6 +98,8 @@ at Capacitor time also resolves Apple's "wrapped website" rejection risk.
 9. Supersets, per-exercise notes, muscle-group tags — pick per demand, not all at once.
 
 **Tier 3 — cloud + stores**
-10. Phase B: Supabase auth + `workouts` table sync (last-write-wins by `updatedAt`).
+10. ~~Phase B: Supabase auth + `workouts` table sync (last-write-wins by `updatedAt`).~~
+    ✅ client side built 2026-07-07 (+ server-stored presets incl. the user's own plans);
+    awaiting user's Supabase project + end-to-end verification — see tech-stack Status.
 11. Capacitor wrap: local notifications + background audio (fixes the background-timer
     gap), HealthKit integration, store assets + privacy policy, submit.
