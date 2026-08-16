@@ -4,6 +4,7 @@ import { RouterLink, useRouter } from 'vue-router'
 import { useWorkoutsStore } from '../stores/workouts'
 import { useSessionsStore } from '../stores/sessions'
 import { formatDate, formatDuration } from '../format'
+import { equipmentForNames } from '../exercises'
 
 const props = defineProps({ id: { type: String, required: true } })
 
@@ -13,6 +14,9 @@ const router = useRouter()
 const workout = computed(() => store.get(props.id))
 const history = computed(() => sessions.sessionsFor(props.id))
 const isHiit = computed(() => workout.value?.type === 'hiit')
+const equipment = computed(() =>
+  equipmentForNames(workout.value?.exercises.map((ex) => ex.name)),
+)
 
 function duplicate() {
   const id = store.duplicate(props.id)
@@ -45,6 +49,17 @@ function summary(s) {
       {{ workout.exercises.length }}
       {{ workout.exercises.length === 1 ? 'exercise' : 'exercises' }}
     </p>
+
+    <div v-if="equipment.length" class="mt-4 flex flex-wrap items-center gap-2">
+      <span class="text-sm text-neutral-400">Equipment:</span>
+      <span
+        v-for="q in equipment"
+        :key="q"
+        class="rounded-full border border-neutral-200 bg-white px-3 py-1 text-sm text-neutral-600"
+      >
+        {{ q }}
+      </span>
+    </div>
 
     <RouterLink
       :to="{ name: isHiit ? 'hiit' : 'perform', params: { id: workout.id } }"
