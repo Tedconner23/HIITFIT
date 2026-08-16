@@ -1,24 +1,36 @@
 import { defineStore } from 'pinia'
 import { ref, watch } from 'vue'
+import { uid } from '../uid'
+import { isSupabaseConfigured, fetchPresets } from '../supabase'
 
-// Local-first storage. Phase B will sync this to Supabase when signed in.
+// Local-first storage; localStorage remains the source of truth. When signed
+// in, sync.js mirrors this to Supabase (last-write-wins by updatedAt).
 const KEY = 'workouts'
 const SEEDED_KEY = 'seeded'
+const REMOVED_KEY = 'removedWorkouts'
 
-function load() {
+function load(key, fallback) {
   try {
-    return JSON.parse(localStorage.getItem(KEY)) ?? []
+    return JSON.parse(localStorage.getItem(key)) ?? fallback
   } catch {
-    return []
+    return fallback
   }
 }
 
 export const useWorkoutsStore = defineStore('workouts', () => {
-  const workouts = ref(load())
+  const workouts = ref(load(KEY, []))
+  // Tombstones: ids deleted locally but possibly still on the server. Cleared
+  // by sync.js once the remote delete succeeds.
+  const removedIds = ref(load(REMOVED_KEY, []))
 
   watch(
     workouts,
     (value) => localStorage.setItem(KEY, JSON.stringify(value)),
+    { deep: true },
+  )
+  watch(
+    removedIds,
+    (value) => localStorage.setItem(REMOVED_KEY, JSON.stringify(value)),
     { deep: true },
   )
 
@@ -36,7 +48,7 @@ export const useWorkoutsStore = defineStore('workouts', () => {
     }
     workouts.value.push({
       ...workout,
-      id: crypto.randomUUID(),
+      id: uid(),
       createdAt: now,
       updatedAt: now,
     })
@@ -45,6 +57,24 @@ export const useWorkoutsStore = defineStore('workouts', () => {
 
   function remove(id) {
     workouts.value = workouts.value.filter((w) => w.id !== id)
+    if (!removedIds.value.includes(id)) removedIds.value.push(id)
+  }
+
+  function clearRemoved(ids) {
+    removedIds.value = removedIds.value.filter((id) => !ids.includes(id))
+  }
+
+  // Apply the local half of a sync plan (see sync.js planSync).
+  function applySyncPlan(plan) {
+    if (plan.dropLocal.length) {
+      const drop = new Set(plan.dropLocal)
+      workouts.value = workouts.value.filter((w) => !drop.has(w.id))
+    }
+    for (const w of plan.addLocal) workouts.value.push(w)
+    for (const w of plan.updateLocal) {
+      const existing = get(w.id)
+      if (existing) Object.assign(existing, w)
+    }
   }
 
   // Clone a workout (new ids, "(copy)" name) so it can be tweaked independently.
@@ -53,25 +83,56 @@ export const useWorkoutsStore = defineStore('workouts', () => {
     if (!original) return null
     const now = new Date().toISOString()
     const copy = JSON.parse(JSON.stringify(original))
-    copy.id = crypto.randomUUID()
+    copy.id = uid()
     copy.name = `${original.name || 'Untitled'} (copy)`
     copy.createdAt = now
     copy.updatedAt = now
-    copy.exercises = copy.exercises.map((ex) => ({ ...ex, id: crypto.randomUUID() }))
+    copy.exercises = copy.exercises.map((ex) => ({ ...ex, id: uid() }))
     workouts.value.push(copy)
     return copy.id
   }
 
-  // Seed a couple of example workouts the very first time the app runs, so a
-  // fresh install isn't an empty screen. Called once from the app entry (not in
-  // tests). Marks itself done so clearing all workouts later won't re-seed.
-  function seedIfFirstRun() {
-    if (localStorage.getItem(SEEDED_KEY)) return
-    localStorage.setItem(SEEDED_KEY, '1')
-    if (workouts.value.length > 0) return
+  // Turn bare preset data from the server into a user-owned workout: fresh
+  // ids + timestamps, and `seeded` so sync can tell it apart from user work.
+  function materializePreset(preset) {
     const now = new Date().toISOString()
-    const mk = (o) => ({ id: crypto.randomUUID(), createdAt: now, updatedAt: now, ...o })
-    const ex = (o) => ({ id: crypto.randomUUID(), ...o })
+    return {
+      ...preset,
+      id: uid(),
+      createdAt: now,
+      updatedAt: now,
+      seeded: true,
+      exercises: (preset.exercises ?? []).map((ex) => ({ ...ex, id: uid() })),
+    }
+  }
+
+  // Seed example workouts the very first time the app runs, so a fresh install
+  // isn't an empty screen. Presets come from the server when Supabase is
+  // configured (retrying next launch if offline); otherwise a built-in list.
+  // Marks itself done so clearing all workouts later won't re-seed.
+  async function seedIfFirstRun() {
+    if (localStorage.getItem(SEEDED_KEY)) return
+    if (workouts.value.length > 0) {
+      localStorage.setItem(SEEDED_KEY, '1')
+      return
+    }
+    if (isSupabaseConfigured()) {
+      try {
+        const presets = await fetchPresets()
+        // Re-check: a sync may have populated the list while we fetched.
+        if (!localStorage.getItem(SEEDED_KEY) && workouts.value.length === 0) {
+          workouts.value.push(...presets.map(materializePreset))
+          localStorage.setItem(SEEDED_KEY, '1')
+        }
+      } catch {
+        // Offline / server unreachable — leave the flag unset so the next
+        // launch retries.
+      }
+      return
+    }
+    const now = new Date().toISOString()
+    const mk = (o) => ({ id: uid(), createdAt: now, updatedAt: now, seeded: true, ...o })
+    const ex = (o) => ({ id: uid(), ...o })
     workouts.value.push(
       mk({
         name: 'Full Body',
@@ -153,6 +214,8 @@ export const useWorkoutsStore = defineStore('workouts', () => {
         ],
       }),
     )
+    // Mark done only after seeding succeeded, so a crash above retries next run.
+    localStorage.setItem(SEEDED_KEY, '1')
   }
 
   // Merge imported workouts by id; newer `updatedAt` wins. Returns count added/updated.
@@ -173,13 +236,24 @@ export const useWorkoutsStore = defineStore('workouts', () => {
     return changed
   }
 
-  return { workouts, get, save, remove, duplicate, seedIfFirstRun, importMerge }
+  return {
+    workouts,
+    removedIds,
+    get,
+    save,
+    remove,
+    clearRemoved,
+    applySyncPlan,
+    duplicate,
+    seedIfFirstRun,
+    importMerge,
+  }
 })
 
 export function emptyExercise(type = 'reps') {
   return type === 'hiit'
-    ? { id: crypto.randomUUID(), name: '', work: 40, rest: 20 }
-    : { id: crypto.randomUUID(), name: '', sets: 3, reps: '10', rest: 60 }
+    ? { id: uid(), name: '', work: 40, rest: 20 }
+    : { id: uid(), name: '', sets: 3, reps: '10', rest: 60 }
 }
 
 export function emptyWorkout(type = 'reps') {

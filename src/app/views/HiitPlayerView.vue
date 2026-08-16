@@ -3,13 +3,15 @@ import { ref, computed, onUnmounted } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { useWorkoutsStore } from '../stores/workouts'
 import { useSessionsStore } from '../stores/sessions'
-import { buildTimeline, timelineDuration } from '../hiit'
+import { useSettingsStore } from '../stores/settings'
+import { buildTimeline, timelineDuration, phaseLabel } from '../hiit'
 import { formatDuration } from '../format'
 
 const props = defineProps({ id: { type: String, required: true } })
 
 const store = useWorkoutsStore()
 const sessions = useSessionsStore()
+const settings = useSettingsStore()
 const router = useRouter()
 const workout = store.get(props.id)
 
@@ -19,6 +21,18 @@ const timeline = workout
   : []
 const totalDuration = workout ? timelineDuration(buildTimeline(workout)) : 0
 
+// Non-prep seconds elapsed before each interval — the basis for the progress
+// bar and elapsed/remaining readouts (the 5s prep lead-in isn't counted).
+const cumulativeBefore = []
+{
+  let acc = 0
+  for (const it of timeline) {
+    cumulativeBefore.push(acc)
+    if (it.kind !== 'prep') acc += it.seconds
+  }
+}
+const totalWork = timeline.filter((it) => it.kind === 'work').length
+
 const started = ref(false)
 const paused = ref(false)
 const index = ref(0)
@@ -27,9 +41,32 @@ const remaining = ref(timeline[0]?.seconds ?? 0)
 const current = computed(() => timeline[index.value] ?? null)
 const next = computed(() => timeline[index.value + 1] ?? null)
 const panelClass = computed(() => {
-  if (current.value?.kind === 'work') return 'bg-neutral-900 text-white'
-  return 'bg-neutral-100 text-neutral-900'
+  switch (current.value?.kind) {
+    case 'work':
+      return 'bg-neutral-900 text-white'
+    case 'warmup':
+      return 'bg-amber-100 text-amber-900'
+    case 'cooldown':
+      return 'bg-sky-100 text-sky-900'
+    default: // rest, prep
+      return 'bg-neutral-100 text-neutral-900'
+  }
 })
+
+// How many work intervals have started (used for "Interval X / N").
+const workNumber = computed(
+  () => timeline.slice(0, index.value + 1).filter((it) => it.kind === 'work').length,
+)
+const elapsed = computed(() => {
+  const c = current.value
+  if (!c) return totalDuration
+  const within = c.kind === 'prep' ? 0 : c.seconds - remaining.value
+  return cumulativeBefore[index.value] + within
+})
+const remainingTotal = computed(() => Math.max(0, totalDuration - elapsed.value))
+const progressPct = computed(() =>
+  totalDuration ? Math.min(100, (elapsed.value / totalDuration) * 100) : 0,
+)
 
 let intervalEnd = 0
 let timerId = null
@@ -37,7 +74,7 @@ let audioCtx = null
 let wakeLock = null
 
 function beep(freq, dur = 0.15) {
-  if (!audioCtx) return
+  if (!audioCtx || !settings.sound) return
   const o = audioCtx.createOscillator()
   const g = audioCtx.createGain()
   o.type = 'sine'
@@ -80,10 +117,52 @@ async function requestWakeLock() {
 }
 
 function vibrate(ms) {
+  if (!settings.vibration) return
   try {
     navigator.vibrate?.(ms)
   } catch {
     // ignore
+  }
+}
+
+// Speak a short cue. Best-effort: unlocked by the Start tap (a user gesture),
+// silent where speechSynthesis is unavailable or the voice cue is off.
+function speak(text) {
+  if (!settings.voice) return
+  try {
+    const synth = window.speechSynthesis
+    if (!synth) return
+    synth.cancel() // don't let cues queue up and lag behind the timer
+    const u = new SpeechSynthesisUtterance(text)
+    u.rate = 1.05
+    synth.speak(u)
+  } catch {
+    // ignore
+  }
+}
+
+function upcomingWorkName(from) {
+  for (let i = from + 1; i < timeline.length; i++) {
+    if (timeline[i].kind === 'work') return timeline[i].name
+  }
+  return null
+}
+
+function announce(i) {
+  const item = timeline[i]
+  switch (item.kind) {
+    case 'work':
+      return speak(item.name)
+    case 'rest': {
+      const nextWork = upcomingWorkName(i)
+      return speak(nextWork ? `Rest. Next up, ${nextWork}` : 'Rest')
+    }
+    case 'warmup':
+      return speak('Warm up')
+    case 'cooldown':
+      return speak('Cool down')
+    case 'prep':
+      return speak('Get ready')
   }
 }
 
@@ -93,6 +172,7 @@ function beginAt(i) {
   intervalEnd = Date.now() + timeline[i].seconds * 1000
   vibrate(timeline[i].kind === 'work' ? 80 : 40)
   if (timeline[i].kind === 'work') beep(880, 0.18)
+  announce(i)
 }
 
 function togglePause() {
@@ -132,6 +212,11 @@ function cleanup() {
     // ignore
   }
   wakeLock = null
+  try {
+    window.speechSynthesis?.cancel()
+  } catch {
+    // ignore
+  }
 }
 
 function finish() {
@@ -198,7 +283,7 @@ onUnmounted(cleanup)
       :class="panelClass"
     >
       <p class="text-sm uppercase tracking-widest opacity-60">
-        {{ current?.kind === 'work' ? 'Work' : current?.kind === 'rest' ? 'Rest' : 'Get ready' }}
+        {{ phaseLabel(current?.kind) }}
       </p>
       <p class="text-2xl font-semibold">{{ current?.name }}</p>
       <p class="text-7xl font-bold tabular-nums">{{ remaining }}</p>
@@ -206,6 +291,20 @@ onUnmounted(cleanup)
         <template v-if="next">Next: {{ next.name }}</template>
         <template v-else>Last one!</template>
       </p>
+    </div>
+
+    <div class="mt-4">
+      <div class="h-1.5 w-full overflow-hidden rounded-full bg-neutral-200">
+        <div
+          class="h-full rounded-full bg-neutral-900 transition-all duration-200"
+          :style="{ width: progressPct + '%' }"
+        ></div>
+      </div>
+      <div class="mt-1.5 flex justify-between text-xs tabular-nums text-neutral-400">
+        <span>{{ formatDuration(elapsed) }}</span>
+        <span v-if="totalWork">Interval {{ workNumber }} / {{ totalWork }}</span>
+        <span>-{{ formatDuration(remainingTotal) }}</span>
+      </div>
     </div>
 
     <div class="mt-4 flex gap-3">

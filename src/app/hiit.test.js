@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildTimeline, timelineDuration } from './hiit'
+import { buildTimeline, timelineDuration, phaseLabel } from './hiit'
 
 const workout = {
   rounds: 2,
@@ -40,5 +40,48 @@ describe('buildTimeline', () => {
   it('timelineDuration sums seconds', () => {
     // round: 30+15+20+10 = 75; ×2 = 150; minus trimmed final rest (10) = 140
     expect(timelineDuration(buildTimeline(workout))).toBe(140)
+  })
+
+  it('prepends a warm-up interval', () => {
+    const t = buildTimeline({ ...workout, warmup: 30 })
+    expect(t[0]).toMatchObject({ kind: 'warmup', name: 'Warm-up', seconds: 30, round: 0 })
+    expect(t[1].kind).toBe('work')
+  })
+
+  it('appends a cool-down as the final interval (after trailing-rest trim)', () => {
+    const t = buildTimeline({ ...workout, cooldown: 45 })
+    expect(t.at(-1)).toMatchObject({ kind: 'cooldown', name: 'Cool-down', seconds: 45 })
+    // still ends on effort → cool-down, and the trailing exercise rest is gone
+    expect(t.filter((i) => i.kind === 'cooldown')).toHaveLength(1)
+  })
+
+  it('inserts rest between rounds, replacing that round trailing exercise rest', () => {
+    const t = buildTimeline({ ...workout, restBetweenRounds: 60 })
+    const roundRests = t.filter((i) => i.name === 'Round rest')
+    // one round boundary for 2 rounds
+    expect(roundRests).toHaveLength(1)
+    expect(roundRests[0]).toMatchObject({ kind: 'rest', seconds: 60 })
+    // no rest-on-rest: the interval before a round rest is work
+    const idx = t.findIndex((i) => i.name === 'Round rest')
+    expect(t[idx - 1].kind).toBe('work')
+  })
+
+  it('does not add a round rest after the final round', () => {
+    const t = buildTimeline({
+      rounds: 1,
+      restBetweenRounds: 60,
+      exercises: [{ id: 'a', name: 'X', work: 20, rest: 10 }],
+    })
+    expect(t.some((i) => i.name === 'Round rest')).toBe(false)
+  })
+})
+
+describe('phaseLabel', () => {
+  it('maps interval kinds to labels', () => {
+    expect(phaseLabel('work')).toBe('Work')
+    expect(phaseLabel('rest')).toBe('Rest')
+    expect(phaseLabel('warmup')).toBe('Warm-up')
+    expect(phaseLabel('cooldown')).toBe('Cool-down')
+    expect(phaseLabel('prep')).toBe('Get ready')
   })
 })
